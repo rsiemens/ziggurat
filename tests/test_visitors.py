@@ -21,6 +21,9 @@ class RendererTestCases(TestCase):
         result = self.render(lookup, {"foo": "bar"})
         self.assertEqual(result, "bar")
 
+        result = self.render(lookup, {"foo": 42})
+        self.assertEqual(result, "42")
+
     def test_visit_if(self):
         if_stmt = ast.If(
             condition="username",

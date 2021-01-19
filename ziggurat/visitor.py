@@ -1,8 +1,28 @@
+from abc import ABC, abstractmethod
+from typing import Any, Dict, TYPE_CHECKING
+
 from ziggurat import ast
 
 
-class Renderer:
-    def __init__(self, context):
+class Visitor(ABC):
+    def visit_block(self, node: ast.Block):
+        ...
+
+    def visit_if(self, node: ast.If):
+        ...
+
+    def visit_for(self, node: ast.For):
+        ...
+
+    def visit_text(self, node: ast.Text):
+        ...
+
+    def visit_lookup(self, node: ast.Lookup):
+        ...
+
+
+class Renderer(Visitor):
+    def __init__(self, context: Dict[str, Any]):
         self.context = context
         self.result = ""
 
@@ -33,19 +53,22 @@ class Renderer:
         self.result += node.text
 
     def visit_lookup(self, node: ast.Lookup):
-        self.result += self.context[node.name]
+        value = self.context[node.name]
+        if not isinstance(value, str):
+            value = str(value)
+        self.result += value
 
 
-class Display:
+class Display(Visitor):
     def __init__(self):
         self.depth = 0
         self._result = ""
 
     @property
-    def result(self):
+    def result(self) -> str:
         return self._result.strip()
 
-    def depth_log(self, txt):
+    def depth_log(self, txt: str):
         self._result += f'{"  " * self.depth}{txt}\n'
 
     def visit_block(self, node: ast.Block):

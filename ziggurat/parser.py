@@ -1,53 +1,40 @@
 import string
+from typing import List, Optional
+
 from ziggurat import ast
 
 
 class Parser:
-    """
-    Grammar
-    =======
-
-    TEMPLATE := TEXT | TEXT_LOOKUP | CONTROL_FLOW
-    CONTROL_FLOW := IF | LOOP
-    IF := "@if" " "+ LOOKUP " "* "@" TEMPLATE "@endif@"
-    TEXT_LOOKUP := "{" LOOKUP "}"
-    LOOKUP := a-zA-Z a-zA-Z0-9_*
-    """
-
-    def __init__(self, source):
+    def __init__(self, source: str):
         self.source = source
         self.cursor = 0
 
     @property
-    def current(self):
+    def current(self) -> Optional[str]:
         try:
             return self.source[self.cursor]
         except IndexError:
             return None
 
-    def next(self):
+    def next(self) -> Optional[str]:
         self.cursor += 1
         try:
             return self.source[self.cursor - 1]
         except IndexError:
             return None
 
-    def match(self, tokens, after_whitespace=False):
-        matched = ""
-
+    def match(self, tokens: str, after_whitespace: bool = False) -> bool:
         if after_whitespace:
             self.eat_whitespace()
 
         for token in tokens:
-            matched += self.current
-
             if self.current == token:
                 self.next()
             else:
                 raise Exception(f"Expected {tokens}, but got {repr(matched)} instead")
-        return matched
+        return True
 
-    def peek_match(self, tokens):
+    def peek_match(self, tokens: str) -> bool:
         save_point = self.cursor
         for token in tokens:
             if token == self.source[self.cursor]:
@@ -66,14 +53,14 @@ class Parser:
         if self.current == "\n":
             self.next()
 
-    def word(self):
+    def word(self) -> str:
         result = ""
         while self.current and self.current in string.ascii_letters:
-            result += self.next()
+            result += self.next()  # type: ignore
         return result
 
-    def block(self):
-        nodes = []
+    def block(self) -> ast.Block:
+        nodes: List[ast.AST] = []
         while self.current:
             if self.peek_match("@if "):
                 nodes.append(self.if_stmt())
@@ -87,12 +74,12 @@ class Parser:
                 break
         return ast.Block(nodes)
 
-    def if_stmt(self):
+    def if_stmt(self) -> ast.If:
         """
         @if thing@
-           {thing} 
+           {thing}
         @else@
-            Nothing there
+            Nothing
         @endif@
         """
         self.match("@if ")
@@ -113,7 +100,7 @@ class Parser:
 
         return ast.If(word, consequence, alternative)
 
-    def for_loop(self):
+    def for_loop(self) -> ast.For:
         """
         @for item in items@
             {item}
@@ -136,7 +123,7 @@ class Parser:
 
         return ast.For(word, iterator, body)
 
-    def lookup(self):
+    def lookup(self) -> ast.Lookup:
         """
         {variable}
         """
@@ -148,12 +135,12 @@ class Parser:
 
         return ast.Lookup(word)
 
-    def text(self):
+    def text(self) -> ast.Text:
         result = ""
         while self.current not in [None, "@", "{"]:
-            result += self.next()
+            result += self.next()  # type: ignore
 
         return ast.Text(result)
 
-    def parse(self):
+    def parse(self) -> ast.Block:
         return self.block()
