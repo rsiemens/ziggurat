@@ -24,10 +24,13 @@ class Parser:
             return None
 
     def match(self, tokens: str, after_whitespace: bool = False) -> bool:
+        matched = ""
         if after_whitespace:
             self.eat_whitespace()
 
         for token in tokens:
+            matched += self.current
+
             if self.current == token:
                 self.next()
             else:
@@ -55,7 +58,12 @@ class Parser:
 
     def word(self) -> str:
         result = ""
-        while self.current and self.current in string.ascii_letters:
+        following_chars = string.ascii_letters + string.digits + "_."
+
+        if self.current and self.current in string.ascii_letters:
+            result += self.next()
+
+        while self.current and self.current in following_chars:
             result += self.next()  # type: ignore
         return result
 
@@ -125,15 +133,23 @@ class Parser:
 
     def lookup(self) -> ast.Lookup:
         """
-        {variable}
+        {variable | optional_filter}
         """
         self.match("{")
         self.eat_whitespace()
         word = self.word()
         self.eat_whitespace()
+
+        filter = None
+        if self.current == "|":
+            self.next()
+            self.eat_whitespace()
+            filter = self.word()
+            self.eat_whitespace()
+
         self.match("}")
 
-        return ast.Lookup(word)
+        return ast.Lookup(word, filter)
 
     def text(self) -> ast.Text:
         result = ""

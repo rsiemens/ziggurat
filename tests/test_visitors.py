@@ -1,13 +1,14 @@
 from unittest import TestCase
 
 from ziggurat import ast
+from ziggurat import Template
 from ziggurat.parser import Parser
 from ziggurat.visitor import Renderer
 
 
 class RendererTestCases(TestCase):
     def render(self, node: ast.AST, context: dict) -> str:
-        renderer = Renderer(context)
+        renderer = Renderer(context, Template.filters)
         node.accept(renderer)
         return renderer.result
 
@@ -23,6 +24,19 @@ class RendererTestCases(TestCase):
 
         result = self.render(lookup, {"foo": 42})
         self.assertEqual(result, "42")
+
+        lookup = ast.Lookup("foo.bar")
+        result = self.render(lookup, {"foo": {"bar": "baz"}})
+        self.assertEqual(result, "baz")
+
+        lookup = ast.Lookup("foo.bar")
+        Foo = type("Foo", (), {"bar": 42})
+        result = self.render(lookup, {"foo": Foo()})
+        self.assertEqual(result, "42")
+
+        lookup = ast.Lookup("foo", filter="upper")
+        result = self.render(lookup, {"foo": "bar"})
+        self.assertEqual(result, "BAR")
 
     def test_visit_if(self):
         if_stmt = ast.If(

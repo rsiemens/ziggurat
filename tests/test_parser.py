@@ -106,6 +106,12 @@ class ParserTestCases(TestCase):
         lookup = Parser("{ \t\tvar \n\t }").lookup()
         self.assert_ast(lookup, "Lookup(var)")
 
+        lookup = Parser("{obj.attr}").lookup()
+        self.assert_ast(lookup, "Lookup(obj.attr)")
+
+        lookup = Parser("{var|upper}").lookup()
+        self.assert_ast(lookup, "Lookup(var filter=upper)")
+
     def test_for_loop(self):
         for_loop = Parser("@for i in numbers@i={i}@endfor@").for_loop()
         expected_ast = """

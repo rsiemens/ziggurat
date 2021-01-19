@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, TYPE_CHECKING
+from typing import Any, Callable, Dict, TYPE_CHECKING
 
 from ziggurat import ast
 
@@ -22,8 +22,9 @@ class Visitor(ABC):
 
 
 class Renderer(Visitor):
-    def __init__(self, context: Dict[str, Any]):
+    def __init__(self, context: Dict[str, Any], filters: Dict[str, Callable]):
         self.context = context
+        self.filters = filters
         self.result = ""
 
     def visit_block(self, node: ast.Block):
@@ -53,9 +54,26 @@ class Renderer(Visitor):
         self.result += node.text
 
     def visit_lookup(self, node: ast.Lookup):
-        value = self.context[node.name]
+        parts = node.name.split(".")
+
+        if len(parts) == 1:
+            value = self.context[node.name]
+        else:
+            ctx = self.context
+            for part in parts:
+                if isinstance(ctx, dict):
+                    ctx = ctx[part]
+                else:
+                    ctx = getattr(ctx, part)
+            value = ctx
+
         if not isinstance(value, str):
             value = str(value)
+
+        if node.filter:
+            func = self.filters[node.filter]
+            value = func(value)
+
         self.result += value
 
 
@@ -98,7 +116,10 @@ class Display(Visitor):
         self.depth_log(")")
 
     def visit_lookup(self, node: ast.Lookup):
-        self.depth_log(f"Lookup({node.name})")
+        if node.filter:
+            self.depth_log(f"Lookup({node.name} filter={node.filter})")
+        else:
+            self.depth_log(f"Lookup({node.name})")
 
     def visit_text(self, node: ast.Text):
         self.depth_log(f"Text({repr(node.text)})")
