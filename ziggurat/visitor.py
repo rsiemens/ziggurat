@@ -29,11 +29,11 @@ class Renderer(Visitor):
     def __init__(
         self,
         context: Dict[str, Any],
-        filters: Dict[str, Callable],
+        transforms: Dict[str, Callable],
         base: Optional[Path] = None,
     ):
         self.context = context
-        self.filters = filters
+        self.transforms = transforms
         self.base = base
         self.result = ""
 
@@ -101,8 +101,8 @@ class Renderer(Visitor):
         if not isinstance(value, str):
             value = str(value)
 
-        if node.filter:
-            func = self.filters[node.filter]
+        if node.transform:
+            func = self.transforms[node.transform]
             value = func(value)
 
         self.result += value
@@ -150,8 +150,8 @@ class Display(Visitor):
         self.depth_log(f"Include({node.source})")
 
     def visit_lookup(self, node: ast.Lookup):
-        if node.filter:
-            self.depth_log(f"Lookup({node.name} filter={node.filter})")
+        if node.transform:
+            self.depth_log(f"Lookup({node.name} transform={node.transform})")
         else:
             self.depth_log(f"Lookup({node.name})")
 

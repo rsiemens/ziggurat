@@ -1,14 +1,14 @@
 from pathlib import Path
 from unittest import TestCase
 
-from ziggurat.template import Template, register_filter
+from ziggurat.template import Template, register_transform
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 class TemplateTestCases(TestCase):
     def tearDown(self):
-        Template.filters.pop("custom_filter", None)
+        Template.transforms.pop("custom_transform", None)
 
     def test_render(self):
         template_path = str(FIXTURES_DIR / "greeting.txt")
@@ -59,13 +59,13 @@ server {
             template.render(ctx), "Some base with foo=bar\n\nand bar=foo\n"
         )
 
-    def test_includes_registered_filters(self):
-        def custom_filter(value):
+    def test_includes_registered_transforms(self):
+        def custom_transform(value):
             return value[0]
 
-        register_filter(custom_filter)
+        register_transform(custom_transform)
 
-        template_path = str(FIXTURES_DIR / "filtered_greeting.txt")
+        template_path = str(FIXTURES_DIR / "transformed_greeting.txt")
         template = Template(template_path)
         self.assertEqual(template.render({"name": "World"}), "Hello W!")
 

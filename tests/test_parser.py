@@ -129,7 +129,7 @@ class ParserTestCases(TestCase):
         self.assert_ast(lookup, "Lookup(obj.attr)")
 
         lookup = Parser("{var|upper}").lookup()
-        self.assert_ast(lookup, "Lookup(var filter=upper)")
+        self.assert_ast(lookup, "Lookup(var transform=upper)")
 
     def test_include(self):
         include = Parser("@include foo.txt@").include()

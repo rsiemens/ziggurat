@@ -145,23 +145,23 @@ class Parser:
 
     def lookup(self) -> ast.Lookup:
         """
-        {variable | optional_filter}
+        {variable | optional_transform}
         """
         self.match("{")
         self.eat_whitespace()
         word = self.word()
         self.eat_whitespace()
 
-        filter = None
+        transform = None
         if self.current == "|":
             self.next()
             self.eat_whitespace()
-            filter = self.word()
+            transform = self.word()
             self.eat_whitespace()
 
         self.match("}")
 
-        return ast.Lookup(word, filter)
+        return ast.Lookup(word, transform)
 
     def text(self) -> ast.Text:
         result = ""

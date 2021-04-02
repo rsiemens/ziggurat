@@ -6,7 +6,7 @@ from ziggurat.visitor import Renderer
 
 
 class Template:
-    filters: Dict[str, Callable[[str], str]] = {
+    transforms: Dict[str, Callable[[str], str]] = {
         "upper": str.upper,
         "lower": str.lower,
         "capitalize": str.capitalize,
@@ -25,13 +25,13 @@ class Template:
             self.ast = parser_cls(tmpl.read()).parse()
 
     def render(self, ctx: Dict[str, Any]) -> str:
-        renderer = self.renderer_cls(ctx, self.filters, self.source.parent)
+        renderer = self.renderer_cls(ctx, self.transforms, self.source.parent)
         self.ast.accept(renderer)
         return renderer.result
 
 
-def register_filter(func: Callable[[str], str], name: Optional[str] = None):
+def register_transform(func: Callable[[str], str], name: Optional[str] = None):
     if name is None:
         name = func.__name__
-    Template.filters[name] = func
+    Template.transforms[name] = func
     return func

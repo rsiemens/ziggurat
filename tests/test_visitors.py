@@ -10,7 +10,7 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 class RendererTestCases(TestCase):
     def render(self, node: ast.AST, context: dict, base: Optional[Path] = None) -> str:
-        renderer = Renderer(context, Template.filters, base=base)
+        renderer = Renderer(context, Template.transforms, base=base)
         node.accept(renderer)
         return renderer.result
 
@@ -36,7 +36,7 @@ class RendererTestCases(TestCase):
         result = self.render(lookup, {"foo": Foo()})
         self.assertEqual(result, "42")
 
-        lookup = ast.Lookup("foo", filter="upper")
+        lookup = ast.Lookup("foo", transform="upper")
         result = self.render(lookup, {"foo": "bar"})
         self.assertEqual(result, "BAR")
 
