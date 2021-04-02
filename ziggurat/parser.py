@@ -16,6 +16,13 @@ class Parser:
         except IndexError:
             return None
 
+    def peek(self):
+        try:
+            next = self.source[self.cursor + 1]
+        except IndexError:
+            next = None
+        return next
+
     def next(self) -> Optional[str]:
         self.cursor += 1
         try:
@@ -58,7 +65,7 @@ class Parser:
 
     def word(self) -> str:
         result = ""
-        following_chars = string.ascii_letters + string.digits + "_."
+        following_chars = string.ascii_letters + string.digits + "_./"
 
         if self.current and self.current in string.ascii_letters:
             result += self.next()
@@ -72,8 +79,10 @@ class Parser:
         while self.current:
             if self.peek_match("@if "):
                 nodes.append(self.if_stmt())
-            if self.peek_match("@for "):
+            elif self.peek_match("@for "):
                 nodes.append(self.for_loop())
+            elif self.peek_match("@include "):
+                nodes.append(self.include())
             elif self.current == "{":
                 nodes.append(self.lookup())
             elif self.current != "@":
@@ -121,8 +130,7 @@ class Parser:
         self.eat_whitespace()
         iterator = self.word()
 
-        self.eat_whitespace()
-        self.match("@")
+        self.match("@", after_whitespace=True)
         self.maybe_eat_newline()
 
         body = self.block()
@@ -130,6 +138,12 @@ class Parser:
         self.maybe_eat_newline()
 
         return ast.For(word, iterator, body)
+
+    def include(self) -> ast.Include:
+        self.match("@include ")
+        word = self.word()
+        self.match("@", after_whitespace=True)
+        return ast.Include(word)
 
     def lookup(self) -> ast.Lookup:
         """
@@ -153,7 +167,11 @@ class Parser:
 
     def text(self) -> ast.Text:
         result = ""
-        while self.current not in [None, "@", "{"]:
+        while self.current:
+            if self.current in [None, "@", "{"]:
+                break
+            elif self.current == "\\" and self.peek() in ["@", "{", "}"]:
+                self.next()  # skip "\"
             result += self.next()  # type: ignore
 
         return ast.Text(result)

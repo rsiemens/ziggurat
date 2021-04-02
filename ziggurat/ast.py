@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 if TYPE_CHECKING:
     from ziggurat.visitor import Visitor
@@ -37,6 +37,14 @@ class For(AST):
 
     def accept(self, visitor: "Visitor"):
         visitor.visit_for(self)
+
+
+class Include(AST):
+    def __init__(self, source: str):
+        self.source = source
+
+    def accept(self, visitor: "Visitor"):
+        visitor.visit_include(self)
 
 
 class Text(AST):

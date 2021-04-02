@@ -1,5 +1,6 @@
-from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, TYPE_CHECKING
+from abc import ABC
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional
 
 from ziggurat import ast
 
@@ -22,9 +23,15 @@ class Visitor(ABC):
 
 
 class Renderer(Visitor):
-    def __init__(self, context: Dict[str, Any], filters: Dict[str, Callable]):
+    def __init__(
+        self,
+        context: Dict[str, Any],
+        filters: Dict[str, Callable],
+        base: Optional[Path] = None,
+    ):
         self.context = context
         self.filters = filters
+        self.base = base
         self.result = ""
 
     def visit_block(self, node: ast.Block):
@@ -32,7 +39,20 @@ class Renderer(Visitor):
             child_node.accept(self)
 
     def visit_if(self, node: ast.If):
-        if self.context[node.condition]:
+        parts = node.condition.split(".")
+
+        if len(parts) == 1:
+            value = self.context[node.condition]
+        else:
+            ctx = self.context
+            for part in parts:
+                if isinstance(ctx, dict):
+                    ctx = ctx[part]
+                else:
+                    ctx = getattr(ctx, part)
+            value = ctx
+
+        if value:
             node.consequence.accept(self)
         else:
             node.alternative.accept(self)
@@ -49,6 +69,14 @@ class Renderer(Visitor):
             self.context[node.name] = previous
         elif node.name in self.context:
             del self.context[node.name]
+
+    def visit_include(self, node: ast.Include):
+        from ziggurat.template import Template
+
+        if self.base is None:
+            raise ValueError("You must provide a base path when using @include file@")
+        template = Template(str(self.base / node.source))
+        self.result += template.render(self.context)
 
     def visit_text(self, node: ast.Text):
         self.result += node.text
@@ -114,6 +142,9 @@ class Display(Visitor):
         node.body.accept(self)
         self.depth -= 1
         self.depth_log(")")
+
+    def visit_include(self, node: ast.Include):
+        self.depth_log(f"Include({node.source})")
 
     def visit_lookup(self, node: ast.Lookup):
         if node.filter:

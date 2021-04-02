@@ -30,6 +30,22 @@ class ParserTestCases(TestCase):
         parser = Parser("")
         self.assertEqual(parser.current, None)
 
+    def test_peek(self):
+        parser = Parser("abc")
+        self.assertEqual(parser.cursor, 0)
+        self.assertEqual(parser.current, "a")
+        self.assertEqual(parser.peek(), "b")
+        self.assertEqual(parser.cursor, 0)
+        self.assertEqual(parser.current, "a")
+
+        parser.next()
+        parser.next()
+        self.assertEqual(parser.cursor, 2)
+        self.assertEqual(parser.current, "c")
+        self.assertEqual(parser.peek(), None)
+        self.assertEqual(parser.cursor, 2)
+        self.assertEqual(parser.current, "c")
+
     def test_next(self):
         parser = Parser("abc")
 
@@ -99,6 +115,9 @@ class ParserTestCases(TestCase):
         text = Parser("abc @if foo@xyz@endif@").text()
         self.assert_ast(text, "Text('abc ')")
 
+        text = Parser("abc \@if foo\@\{xyz\}\@endif\@").text()
+        self.assert_ast(text, "Text('abc @if foo@{xyz}@endif@')")
+
     def test_lookup(self):
         lookup = Parser("{var}").lookup()
         self.assert_ast(lookup, "Lookup(var)")
@@ -111,6 +130,11 @@ class ParserTestCases(TestCase):
 
         lookup = Parser("{var|upper}").lookup()
         self.assert_ast(lookup, "Lookup(var filter=upper)")
+
+    def test_include(self):
+        include = Parser('@include foo.txt@').include()
+        expected_ast = "Include(foo.txt)"
+        self.assert_ast(include, expected_ast)
 
     def test_for_loop(self):
         for_loop = Parser("@for i in numbers@i={i}@endfor@").for_loop()
