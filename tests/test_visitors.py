@@ -1,13 +1,12 @@
-from typing import Optional
 from pathlib import Path
+from typing import Optional
 from unittest import TestCase
 
-from ziggurat import ast
-from ziggurat import Template
+from ziggurat import Template, ast
 from ziggurat.visitor import Renderer
 
-
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
 
 class RendererTestCases(TestCase):
     def render(self, node: ast.AST, context: dict, base: Optional[Path] = None) -> str:
@@ -71,6 +70,6 @@ class RendererTestCases(TestCase):
 
     def test_visit_include(self):
         include = ast.Include(f'{FIXTURES_DIR / "base.txt"}')
-        result = self.render(include, {'foo': 'bar'}, base=FIXTURES_DIR)
+        result = self.render(include, {"foo": "bar"}, base=FIXTURES_DIR)
 
         self.assertEqual(result, "Some base with foo=bar\n")

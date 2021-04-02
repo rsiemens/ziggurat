@@ -16,12 +16,11 @@ class Parser:
         except IndexError:
             return None
 
-    def peek(self):
+    def peek(self) -> Optional[str]:
         try:
-            next = self.source[self.cursor + 1]
+            return self.source[self.cursor + 1]
         except IndexError:
-            next = None
-        return next
+            return None
 
     def next(self) -> Optional[str]:
         self.cursor += 1
@@ -36,9 +35,8 @@ class Parser:
             self.eat_whitespace()
 
         for token in tokens:
-            matched += self.current
-
-            if self.current == token:
+            if self.current is not None and self.current == token:
+                matched += self.current
                 self.next()
             else:
                 raise Exception(f"Expected {tokens}, but got {repr(matched)} instead")
@@ -68,7 +66,7 @@ class Parser:
         following_chars = string.ascii_letters + string.digits + "_./"
 
         if self.current and self.current in string.ascii_letters:
-            result += self.next()
+            result += self.next()  # type: ignore
 
         while self.current and self.current in following_chars:
             result += self.next()  # type: ignore

@@ -132,7 +132,7 @@ class ParserTestCases(TestCase):
         self.assert_ast(lookup, "Lookup(var filter=upper)")
 
     def test_include(self):
-        include = Parser('@include foo.txt@').include()
+        include = Parser("@include foo.txt@").include()
         expected_ast = "Include(foo.txt)"
         self.assert_ast(include, expected_ast)
 

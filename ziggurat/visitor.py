@@ -21,6 +21,9 @@ class Visitor(ABC):
     def visit_lookup(self, node: ast.Lookup):
         ...
 
+    def visit_include(self, node: ast.Include):
+        ...
+
 
 class Renderer(Visitor):
     def __init__(

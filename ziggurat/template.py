@@ -6,7 +6,11 @@ from ziggurat.visitor import Renderer
 
 
 class Template:
-    filters = {"upper": str.upper, "lower": str.lower, "capitalize": str.capitalize}
+    filters: Dict[str, Callable[[str], str]] = {
+        "upper": str.upper,
+        "lower": str.lower,
+        "capitalize": str.capitalize,
+    }
 
     def __init__(
         self,
