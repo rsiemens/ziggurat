@@ -1,6 +1,10 @@
-# Ziggurat
+# Ziggurat 
 
 A simple and straightforward Python templating engine.
+
+![CI](https://github.com/rsiemens/ziggurat/actions/workflows/ci.yml/badge.svg?branch=master)
+
+### A Quick Example
 
 ```
 Dunder Mifflin Sales Report
@@ -51,3 +55,109 @@ Product    Sold    Amount
 Letter 8.5" x 11"  500  $8975
 Legal 8.5" x 14"  237  $7107
 ```
+
+### Features
+
+#### `{variable}` lookup
+
+Looks up the variable passed into the `Template.render` context dictionary and replaces it with the string value.
+
+```
+Hello {name}!
+```
+
+If `variable` is a dictionary or an object you can access members using `.` notation.
+
+```
+Hello {user.name}
+```
+
+#### `{variable | transform}` transforms
+
+Passes `variable` to the registered `transform` function. `transform` is a function which takes a single argument, the string value of `variable`, and should return a string.
+
+For example, registering a `reverse` transform
+
+```python
+from ziggurat import Template, register_transform
+
+@register_transform
+def reverse(value):
+    return value[::-1]
+
+Template('greeting.txt').render({'name': 'World'})
+```
+
+Which could then be used in `greeting.txt` like so
+
+```
+Hello {name|reverse}!
+```
+
+producing `Hello dlroW`.
+
+#### `@if condition@` statement
+
+Used to conditionally render some text.
+
+```
+@if name@
+Hello {name}!
+@endif@
+```
+
+You can also pair it with an `@else@` to provide an alternative.
+
+```
+@if name@
+Hello {name}!
+@else@
+Hello!
+@endif@
+```
+
+If `condition` is a dictionary or an object you can access members using `.` notation.
+
+```
+@if user.name@Hello {user.name}@endif@
+```
+
+#### `@for item in collection@` iterator
+
+Used for looping over a collection.
+
+```
+@for city in cities@
+- {city}
+@endfor@
+```
+
+#### `@include@` directive
+
+Useful for transcluding a common piece of template into another template. For example consider a simple letterhead that is always included in documents.
+
+```
+Big Business Inc.
+{phone}
+{email}
+{address}
+
+To: {to}
+Date: {date}
+```
+
+This can then be included in all letters like so.
+
+```
+@include letterhead.txt@
+
+Dear {to},
+
+Thanks for doing big business with Big Business Inc!
+
+Best Regards,
+
+{from}
+```
+
+The included template will have the same context available to it as the parent template.
