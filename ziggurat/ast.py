@@ -56,9 +56,9 @@ class Text(AST):
 
 
 class Lookup(AST):
-    def __init__(self, name: str, transform: Optional[str] = None):
+    def __init__(self, name: str, transforms: List[str]):
         self.name = name
-        self.transform = transform
+        self.transforms = transforms
 
     def accept(self, visitor: "Visitor"):
         visitor.visit_lookup(self)

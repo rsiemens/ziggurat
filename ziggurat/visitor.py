@@ -35,6 +35,7 @@ class Renderer(Visitor):
         self.context = context
         self.transforms = transforms
         self.base = base
+        self.include_cache: Dict[str, str] = {}
         self.result = ""
 
     def visit_block(self, node: ast.Block):
@@ -76,10 +77,17 @@ class Renderer(Visitor):
     def visit_include(self, node: ast.Include):
         from ziggurat.template import Template
 
+        cached_result = self.include_cache.get(node.source)
+        if cached_result:
+            self.result += cached_result
+            return
+
         if self.base is None:
             raise ValueError("You must provide a base path when using @include file@")
         template = Template(str(self.base / node.source))
-        self.result += template.render(self.context)
+        result = template.render(self.context)
+        self.include_cache[node.source] = result
+        self.result += result
 
     def visit_text(self, node: ast.Text):
         self.result += node.text
@@ -98,12 +106,12 @@ class Renderer(Visitor):
                     ctx = getattr(ctx, part)
             value = ctx
 
+        for transform in node.transforms:
+            func = self.transforms[transform]
+            value = func(value)
+
         if not isinstance(value, str):
             value = str(value)
-
-        if node.transform:
-            func = self.transforms[node.transform]
-            value = func(value)
 
         self.result += value
 
@@ -150,8 +158,8 @@ class Display(Visitor):
         self.depth_log(f"Include({node.source})")
 
     def visit_lookup(self, node: ast.Lookup):
-        if node.transform:
-            self.depth_log(f"Lookup({node.name} transform={node.transform})")
+        if node.transforms:
+            self.depth_log(f"Lookup({node.name} transforms={node.transforms})")
         else:
             self.depth_log(f"Lookup({node.name})")
 

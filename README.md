@@ -27,7 +27,7 @@ from ziggurat import Template, register_transform
 
 @register_transform
 def with_dollar_sign(value):
-    return f'${value}'
+    return f'${value:.2f}'
 
 report = Template('report.txt').render({
     'branch': 'scranton',
@@ -52,8 +52,8 @@ Scranton - Q1 2021
 Private Information, do not share!
 
 Product    Sold    Amount
-Letter 8.5" x 11"  500  $8975
-Legal 8.5" x 14"  237  $7107
+Letter 8.5" x 11"  500  $8975.00
+Legal 8.5" x 14"  237  $7107.00
 ```
 
 ### Features
@@ -74,7 +74,9 @@ Hello {user.name}
 
 #### `{variable | transform}` transforms
 
-Passes `variable` to the registered `transform` function. `transform` is a function which takes a single argument, the string value of `variable`, and should return a string.
+Passes `variable` to the registered `transform` function. `transform` is a function which takes a single argument, the value of `variable`, and return a value.
+You can also chain transforms allowing for a more complex transform constructed from many smaller ones. If the value of the variable, or last transform, is not
+a string, then an implicit `str(value)` transform is applied.
 
 For example, registering a `reverse` transform
 
@@ -94,7 +96,15 @@ Which could then be used in `greeting.txt` like so
 Hello {name|reverse}!
 ```
 
-producing `Hello dlroW`.
+producing `Hello dlroW!`.
+
+You can also chain transforms
+
+```
+Hello {name | reverse | lower | capitalize}!
+```
+
+producing `Hello Dlrow!`.
 
 #### `@if condition@` statement
 
@@ -132,7 +142,7 @@ Used for looping over a collection.
 @endfor@
 ```
 
-#### `@include@` directive
+#### `@include template@` directive
 
 Useful for transcluding a common piece of template into another template. For example consider a simple letterhead that is always included in documents.
 
