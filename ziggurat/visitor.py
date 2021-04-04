@@ -35,7 +35,7 @@ class Renderer(Visitor):
         self.context = context
         self.transforms = transforms
         self.base = base
-        self.include_cache = {}
+        self.include_cache: Dict[str, str] = {}
         self.result = ""
 
     def visit_block(self, node: ast.Block):
@@ -79,7 +79,7 @@ class Renderer(Visitor):
 
         cached_result = self.include_cache.get(node.source)
         if cached_result:
-            result += cached_result
+            self.result += cached_result
             return
 
         if self.base is None:
