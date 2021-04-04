@@ -20,31 +20,39 @@ class RendererTestCases(TestCase):
         self.assertEqual(result, "abc")
 
     def test_visit_lookup(self):
-        lookup = ast.Lookup("foo")
+        lookup = ast.Lookup("foo", transforms=[])
         result = self.render(lookup, {"foo": "bar"})
         self.assertEqual(result, "bar")
 
         result = self.render(lookup, {"foo": 42})
         self.assertEqual(result, "42")
 
-        lookup = ast.Lookup("foo.bar")
+        lookup = ast.Lookup("foo.bar", transforms=[])
         result = self.render(lookup, {"foo": {"bar": "baz"}})
         self.assertEqual(result, "baz")
 
-        lookup = ast.Lookup("foo.bar")
+        lookup = ast.Lookup("foo.bar", transforms=[])
         Foo = type("Foo", (), {"bar": 42})
         result = self.render(lookup, {"foo": Foo()})
         self.assertEqual(result, "42")
 
-        lookup = ast.Lookup("foo", transform="upper")
+        lookup = ast.Lookup("foo", transforms=["upper"])
         result = self.render(lookup, {"foo": "bar"})
         self.assertEqual(result, "BAR")
+
+        lookup = ast.Lookup("foo", transforms=["upper", "lower"])
+        result = self.render(lookup, {"foo": "BaR"})
+        self.assertEqual(result, "bar")
 
     def test_visit_if(self):
         if_stmt = ast.If(
             condition="username",
             consequence=ast.Block(
-                [ast.Text("Hello, "), ast.Lookup("username"), ast.Text("!")]
+                [
+                    ast.Text("Hello, "),
+                    ast.Lookup("username", transforms=[]),
+                    ast.Text("!"),
+                ]
             ),
             alternative=ast.Block([ast.Text("Hello, Guest!")]),
         )
@@ -58,7 +66,9 @@ class RendererTestCases(TestCase):
         for_loop = ast.For(
             name="item",
             iterator="list",
-            body=ast.Block([ast.Text("item="), ast.Lookup("item"), ast.Text("\n")]),
+            body=ast.Block(
+                [ast.Text("item="), ast.Lookup("item", transforms=[]), ast.Text("\n")]
+            ),
         )
         result = self.render(
             for_loop, {"list": ["Bulbasaur", "Charmander", "Squirtle"]}
@@ -73,3 +83,4 @@ class RendererTestCases(TestCase):
         result = self.render(include, {"foo": "bar"}, base=FIXTURES_DIR)
 
         self.assertEqual(result, "Some base with foo=bar\n")
+        # TODO: test include cache

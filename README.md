@@ -94,7 +94,15 @@ Which could then be used in `greeting.txt` like so
 Hello {name|reverse}!
 ```
 
-producing `Hello dlroW`.
+producing `Hello dlroW!`.
+
+You can also chain transforms
+
+```
+Hello {name | reverse | lower | capitalize}!
+```
+
+producing `Hello Dlrow!`.
 
 #### `@if condition@` statement
 
@@ -132,7 +140,7 @@ Used for looping over a collection.
 @endfor@
 ```
 
-#### `@include@` directive
+#### `@include template@` directive
 
 Useful for transcluding a common piece of template into another template. For example consider a simple letterhead that is always included in documents.
 

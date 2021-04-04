@@ -152,16 +152,16 @@ class Parser:
         word = self.word()
         self.eat_whitespace()
 
-        transform = None
-        if self.current == "|":
+        transforms = []
+        while self.current == "|":
             self.next()
             self.eat_whitespace()
-            transform = self.word()
+            transforms.append(self.word())
             self.eat_whitespace()
 
         self.match("}")
 
-        return ast.Lookup(word, transform)
+        return ast.Lookup(word, transforms)
 
     def text(self) -> ast.Text:
         result = ""
