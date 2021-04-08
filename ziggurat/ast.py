@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Union
 
 if TYPE_CHECKING:
     from ziggurat.visitor import Visitor
@@ -7,7 +9,7 @@ if TYPE_CHECKING:
 
 class AST(ABC):
     @abstractmethod
-    def accept(self, visitor: "Visitor"):
+    def accept(self, visitor: Visitor):
         ...
 
 
@@ -15,7 +17,7 @@ class Block(AST):
     def __init__(self, nodes: List[AST]):
         self.nodes = nodes
 
-    def accept(self, visitor: "Visitor"):
+    def accept(self, visitor: Visitor):
         visitor.visit_block(self)
 
 
@@ -25,7 +27,7 @@ class If(AST):
         self.consequence = consequence
         self.alternative = alternative
 
-    def accept(self, visitor: "Visitor"):
+    def accept(self, visitor: Visitor):
         visitor.visit_if(self)
 
 
@@ -35,7 +37,7 @@ class For(AST):
         self.iterator = iterator
         self.body = body
 
-    def accept(self, visitor: "Visitor"):
+    def accept(self, visitor: Visitor):
         visitor.visit_for(self)
 
 
@@ -43,15 +45,25 @@ class Include(AST):
     def __init__(self, source: str):
         self.source = source
 
-    def accept(self, visitor: "Visitor"):
+    def accept(self, visitor: Visitor):
         visitor.visit_include(self)
+
+
+class Macro(AST):
+    def __init__(self, name: str, parameters: List[str], body: Block):
+        self.name = name
+        self.parameters = parameters
+        self.body = body
+
+    def accept(self, visitor: Visitor):
+        visitor.visit_macro(self)
 
 
 class Text(AST):
     def __init__(self, text: str):
         self.text = text
 
-    def accept(self, visitor: "Visitor"):
+    def accept(self, visitor: Visitor):
         visitor.visit_text(self)
 
 
@@ -60,5 +72,14 @@ class Lookup(AST):
         self.name = name
         self.transforms = transforms
 
-    def accept(self, visitor: "Visitor"):
+    def accept(self, visitor: Visitor):
         visitor.visit_lookup(self)
+
+
+class Call(AST):
+    def __init__(self, name: str, arguments: Dict[str, Union[str, ast.Lookup]]):
+        self.name = name
+        self.arguments = arguments
+
+    def accept(self, visitor: Visitor):
+        visitor.visit_call(self)

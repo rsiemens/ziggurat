@@ -1,28 +1,41 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ziggurat import ast
 
 
 class Visitor(ABC):
+    @abstractmethod
     def visit_block(self, node: ast.Block):
         ...
 
+    @abstractmethod
     def visit_if(self, node: ast.If):
         ...
 
+    @abstractmethod
     def visit_for(self, node: ast.For):
         ...
 
+    @abstractmethod
     def visit_text(self, node: ast.Text):
         ...
 
+    @abstractmethod
     def visit_lookup(self, node: ast.Lookup):
         ...
 
+    @abstractmethod
     def visit_include(self, node: ast.Include):
         ...
+
+    @abstractmethod
+    def visit_macro(self, node: ast.Macro):
+        ...
+
+
+MacroDict = Dict[str, Tuple[List[str], ast.Block]]
 
 
 class Renderer(Visitor):
@@ -36,6 +49,7 @@ class Renderer(Visitor):
         self.transforms = transforms
         self.base = base
         self.include_cache: Dict[str, str] = {}
+        self.macros: MacroDict = {}
         self.result = ""
 
     def visit_block(self, node: ast.Block):
@@ -89,6 +103,9 @@ class Renderer(Visitor):
         self.include_cache[node.source] = result
         self.result += result
 
+    def visit_macro(self, node: ast.Macro):
+        self.macros[node.name] = (node.parameters, node.body)
+
     def visit_text(self, node: ast.Text):
         self.result += node.text
 
@@ -114,6 +131,23 @@ class Renderer(Visitor):
             value = str(value)
 
         self.result += value
+
+    def visit_call(self, node: ast.Call):
+        params, macro = self.macros[node.name]
+        # macros run in a sub renderer with their own context which is the
+        # paramater->arg mapping
+        ctx = {}
+        for param in params:
+            arg = node.arguments[param]
+            if isinstance(arg, ast.Lookup):
+                arg = self.context[arg.name]
+            ctx[param] = arg
+
+        renderer = Renderer(context=ctx, transforms=self.transforms, base=self.base)
+        renderer.include_cache = self.include_cache
+        renderer.macros = self.macros  # allows recursive macro calls
+        macro.accept(renderer)
+        self.result += renderer.result
 
 
 class Display(Visitor):
@@ -157,11 +191,32 @@ class Display(Visitor):
     def visit_include(self, node: ast.Include):
         self.depth_log(f"Include({node.source})")
 
+    def visit_macro(self, node: ast.Macro):
+        self.depth_log("Macro(")
+        self.depth += 1
+        self.depth_log(f"name={node.name}")
+        self.depth_log(f"parameters={node.parameters}")
+        node.body.accept(self)
+        self.depth -= 1
+        self.depth_log(")")
+
     def visit_lookup(self, node: ast.Lookup):
         if node.transforms:
             self.depth_log(f"Lookup({node.name} transforms={node.transforms})")
         else:
             self.depth_log(f"Lookup({node.name})")
+
+    def visit_call(self, node: ast.Call):
+        self.depth_log("Call(")
+        self.depth += 1
+        self.depth_log(f"name={node.name}")
+        for k, v in node.arguments.items():
+            if isinstance(v, ast.Lookup):
+                self.depth_log(f"{k}=Lookup({v.name})")
+            else:
+                self.depth_log(f"{k}={repr(v)}")
+        self.depth -= 1
+        self.depth_log(")")
 
     def visit_text(self, node: ast.Text):
         self.depth_log(f"Text({repr(node.text)})")

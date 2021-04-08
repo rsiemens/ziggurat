@@ -105,6 +105,22 @@ class ParserTestCases(TestCase):
         parser.next()
         self.assertEqual(parser.word(), "xyz")
 
+    def test_string_literal(self):
+        parser = Parser('"foo bar"')
+        self.assertEqual(parser.string_literal(), "foo bar")
+        self.assertEqual(parser.current, None)
+
+        parser = Parser("'foo bar'")
+        self.assertEqual(parser.string_literal(), "foo bar")
+        self.assertEqual(parser.current, None)
+
+        parser = Parser("'foo bar")
+        with self.assertRaises(Exception) as ctx:
+            parser.string_literal()
+        self.assertEqual(
+            ctx.exception.args[0], "Expected closing quote (') for string literal"
+        )
+
     def test_text(self):
         text = Parser("abc xyz").text()
         self.assert_ast(text, "Text('abc xyz')")
@@ -140,6 +156,57 @@ class ParserTestCases(TestCase):
         include = Parser("@include foo.txt@").include()
         expected_ast = "Include(foo.txt)"
         self.assert_ast(include, expected_ast)
+
+    def test_macro(self):
+        macro = Parser("@macro no_args()@Some text@endmacro@").macro()
+        expected_ast = """
+        Macro(
+          name=no_args
+          parameters=[]
+          Block([
+            Text('Some text')
+          ])
+        )
+        """
+        self.assert_ast(macro, expected_ast)
+
+        macro = Parser(
+            '@macro input(type, value)@<input type="{type}" value="{value}">@endmacro@'
+        ).macro()
+        expected_ast = """
+        Macro(
+          name=input
+          parameters=['type', 'value']
+          Block([
+            Text('<input type="')
+            Lookup(type)
+            Text('" value="')
+            Lookup(value)
+            Text('">')
+          ])
+        )
+        """
+        self.assert_ast(macro, expected_ast)
+
+    def test_call_macro(self):
+        # macro calls are invoked through lookup
+        lookup = Parser("{!foo}").lookup()
+        expected_ast = """
+        Call(
+          name=foo
+        )
+        """
+        self.assert_ast(lookup, expected_ast)
+
+        lookup = Parser('{!input type="text" value=foo}').lookup()
+        expected_ast = """
+        Call(
+          name=input
+          type='text'
+          value=Lookup(foo)
+        )
+        """
+        self.assert_ast(lookup, expected_ast)
 
     def test_for_loop(self):
         for_loop = Parser("@for i in numbers@i={i}@endfor@").for_loop()

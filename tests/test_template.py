@@ -7,6 +7,8 @@ FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
 
 class TemplateTestCases(TestCase):
+    maxDiff = None
+
     def tearDown(self):
         Template.transforms.pop("custom_transform", None)
 
@@ -73,3 +75,35 @@ server {
         template_path = str(FIXTURES_DIR / "doesnt_exist.txt")
         with self.assertRaises(FileNotFoundError):
             Template(template_path)
+
+    def test_macros(self):
+        template_path = str(FIXTURES_DIR / "macros.txt")
+        template = Template(template_path)
+        result = template.render(
+            {
+                "val": "Hello World!",
+                "some_inputs": ["text", "textarea", "checkbox"],
+            }
+        )
+        # lol, yikes
+        # TODO: add a proper tokenizer so we can clean up some of this line spacing
+        #   around nested structures
+        self.assertEqual(
+            result,
+            """\
+
+
+
+<form>
+    <input type="text" value="Hello World!">
+
+            <input type="text" value="">
+
+            <input type="textarea" value="">
+
+            <input type="checkbox" value="">
+
+    
+</form>
+""",
+        )

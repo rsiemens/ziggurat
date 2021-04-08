@@ -72,6 +72,20 @@ class Parser:
             result += self.next()  # type: ignore
         return result
 
+    def string_literal(self) -> str:
+        quote = self.current  # " or '
+        self.next()
+
+        result = ""
+        while self.current and self.current != quote:
+            result += self.next()
+
+        # consume closing quote
+        if self.next() is None:
+            raise Exception(f"Expected closing quote ({quote}) for string literal")
+
+        return result
+
     def block(self) -> ast.Block:
         nodes: List[ast.AST] = []
         while self.current:
@@ -81,6 +95,8 @@ class Parser:
                 nodes.append(self.for_loop())
             elif self.peek_match("@include "):
                 nodes.append(self.include())
+            elif self.peek_match("@macro "):
+                nodes.append(self.macro())
             elif self.current == "{":
                 nodes.append(self.lookup())
             elif self.current != "@":
@@ -143,12 +159,47 @@ class Parser:
         self.match("@", after_whitespace=True)
         return ast.Include(word)
 
+    def macro(self) -> ast.Macro:
+        """
+        @macro name(param1, param2)@
+            uses {param1} and {param2}
+        @endmacro@
+
+        invoked with {!name param1=value1, param2=value2} which is parsed by
+        `call_macro`.
+        """
+        self.match("@macro ")
+        name = self.word()
+
+        self.match("(", after_whitespace=True)
+        parameters = []
+        param = self.word()
+        self.eat_whitespace()
+        if param:
+            parameters.append(param)
+            while self.current == ",":
+                self.next()
+                self.eat_whitespace()
+                parameters.append(self.word())
+                self.eat_whitespace()
+        self.match(")")
+
+        self.match("@", after_whitespace=True)
+        self.maybe_eat_newline()
+        body = self.block()
+        self.match("@endmacro@")
+        return ast.Macro(name, parameters, body)
+
     def lookup(self) -> ast.Lookup:
         """
         {variable | optional_transform}
         """
         self.match("{")
         self.eat_whitespace()
+
+        if self.current == "!":
+            return self.call_macro()
+
         word = self.word()
         self.eat_whitespace()
 
@@ -162,6 +213,29 @@ class Parser:
         self.match("}")
 
         return ast.Lookup(word, transforms)
+
+    def call_macro(self) -> ast.Call:
+        self.match("!")
+        self.eat_whitespace()
+        name = self.word()
+        self.eat_whitespace()
+
+        args = {}
+        while self.current and self.current != "}":
+            arg = self.word()
+            self.eat_whitespace()
+            self.match("=")
+            self.eat_whitespace()
+            # string literal
+            if self.current in "\"'":
+                val = self.string_literal()
+            else:
+                val = ast.Lookup(self.word(), transforms=[])
+            args[arg] = val
+            self.eat_whitespace()
+
+        self.match("}")
+        return ast.Call(name, args)
 
     def text(self) -> ast.Text:
         result = ""

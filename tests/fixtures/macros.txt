@@ -1,0 +1,13 @@
+@macro input(type, value)@
+    <input type="{type}" value="{value}">
+@endmacro@
+@macro many_inputs(input_types)@
+    @for input_type in input_types@
+    {!input type=input_type value=""}
+    @endfor@
+@endmacro@
+
+<form>
+{!input type="text" value=val}
+{!many_inputs input_types=some_inputs}
+</form>
