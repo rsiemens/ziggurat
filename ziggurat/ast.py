@@ -77,7 +77,7 @@ class Lookup(AST):
 
 
 class Call(AST):
-    def __init__(self, name: str, arguments: Dict[str, Union[str, ast.Lookup]]):
+    def __init__(self, name: str, arguments: Dict[str, Union[str, Lookup]]):
         self.name = name
         self.arguments = arguments
 

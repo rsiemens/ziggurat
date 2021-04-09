@@ -34,6 +34,10 @@ class Visitor(ABC):
     def visit_macro(self, node: ast.Macro):
         ...
 
+    @abstractmethod
+    def visit_call(self, node: ast.Call):
+        ...
+
 
 MacroDict = Dict[str, Tuple[List[str], ast.Block]]
 

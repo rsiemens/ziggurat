@@ -1,5 +1,5 @@
 import string
-from typing import List, Optional
+from typing import Dict, List, Optional, Union
 
 from ziggurat import ast
 
@@ -78,7 +78,7 @@ class Parser:
 
         result = ""
         while self.current and self.current != quote:
-            result += self.next()
+            result += self.next()  # type: ignore
 
         # consume closing quote
         if self.next() is None:
@@ -190,7 +190,7 @@ class Parser:
         self.match("@endmacro@")
         return ast.Macro(name, parameters, body)
 
-    def lookup(self) -> ast.Lookup:
+    def lookup(self) -> Union[ast.Lookup, ast.Call]:
         """
         {variable | optional_transform}
         """
@@ -220,7 +220,7 @@ class Parser:
         name = self.word()
         self.eat_whitespace()
 
-        args = {}
+        args: Dict[str, Union[str, ast.Lookup]] = {}
         while self.current and self.current != "}":
             arg = self.word()
             self.eat_whitespace()
@@ -228,10 +228,9 @@ class Parser:
             self.eat_whitespace()
             # string literal
             if self.current in "\"'":
-                val = self.string_literal()
+                args[arg] = self.string_literal()
             else:
-                val = ast.Lookup(self.word(), transforms=[])
-            args[arg] = val
+                args[arg] = ast.Lookup(self.word(), transforms=[])
             self.eat_whitespace()
 
         self.match("}")
