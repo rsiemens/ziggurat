@@ -171,3 +171,28 @@ Best Regards,
 ```
 
 The included template will have the same context available to it as the parent template.
+
+
+### `@macro name(param1, param2)@` macros
+
+Macros allow componentizing some chunk of templating for reuse. It is a tool for keeping
+templates DRY. They look like this:
+
+```
+@macro unordered_list(title, list)@
+<h1>{title}</h1>
+<ul>
+    @for item in list@
+    <li>{item}</li>
+    @endfor@
+</ul>
+@endmacro@
+```
+
+A macro can then be invoked using the special lookup syntax.
+
+```
+{!unordered_list title="A list of stuff" list=my_list_of_things}
+```
+
+Arguments, must be passed to a macro with `key=value` syntax (in any order).
