@@ -173,7 +173,7 @@ Best Regards,
 The included template will have the same context available to it as the parent template.
 
 
-### `@macro name(param1, param2)@` macros
+#### `@macro name(param1, param2)@` macros
 
 Macros allow componentizing some chunk of templating for reuse. It is a tool for keeping
 templates DRY. They look like this:
