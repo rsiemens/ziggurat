@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -54,7 +55,11 @@ class Renderer(Visitor):
         self.base = base
         self.include_cache: Dict[str, str] = {}
         self.macros: MacroDict = {}
-        self.result = ""
+        self._result: List[str] = []
+
+    @property
+    def result(self):
+        return "".join(self._result)
 
     def visit_block(self, node: ast.Block):
         for child_node in node.nodes:
@@ -97,7 +102,7 @@ class Renderer(Visitor):
 
         cached_result = self.include_cache.get(node.source)
         if cached_result:
-            self.result += cached_result
+            self._result.append(cached_result)
             return
 
         if self.base is None:
@@ -105,13 +110,13 @@ class Renderer(Visitor):
         template = Template(str(self.base / node.source))
         result = template.render(self.context)
         self.include_cache[node.source] = result
-        self.result += result
+        self._result.append(result)
 
     def visit_macro(self, node: ast.Macro):
         self.macros[node.name] = (node.parameters, node.body)
 
     def visit_text(self, node: ast.Text):
-        self.result += node.text
+        self._result.append(node.text)
 
     def visit_lookup(self, node: ast.Lookup):
         parts = node.name.split(".")
@@ -134,7 +139,7 @@ class Renderer(Visitor):
         if not isinstance(value, str):
             value = str(value)
 
-        self.result += value
+        self._result.append(value)
 
     def visit_call(self, node: ast.Call):
         params, macro = self.macros[node.name]
@@ -151,7 +156,7 @@ class Renderer(Visitor):
         renderer.include_cache = self.include_cache
         renderer.macros = self.macros  # allows recursive macro calls
         macro.accept(renderer)
-        self.result += renderer.result
+        self._result.append(renderer.result)
 
 
 class Display(Visitor):
@@ -163,64 +168,65 @@ class Display(Visitor):
     def result(self) -> str:
         return self._result.strip()
 
-    def depth_log(self, txt: str):
+    @contextmanager
+    def inc_depth(self):
+        self.depth += 1
+        yield
+        self.depth -= 1
+
+    def write(self, txt: str):
         self._result += f'{"  " * self.depth}{txt}\n'
 
     def visit_block(self, node: ast.Block):
-        self.depth_log("Block([")
-        self.depth += 1
-        for child_node in node.nodes:
-            child_node.accept(self)
-        self.depth -= 1
-        self.depth_log("])")
+        self.write("Block([")
+        with self.inc_depth():
+            for child_node in node.nodes:
+                child_node.accept(self)
+        self.write("])")
 
     def visit_if(self, node: ast.If):
-        self.depth_log("If(")
-        self.depth += 1
-        self.depth_log(f"condition={node.condition}")
-        node.consequence.accept(self)
-        node.alternative.accept(self)
-        self.depth -= 1
-        self.depth_log(")")
+        self.write("If(")
+        with self.inc_depth():
+            self.write(f"condition={node.condition}")
+            node.consequence.accept(self)
+            node.alternative.accept(self)
+        self.write(")")
 
     def visit_for(self, node: ast.For):
-        self.depth_log("For(")
-        self.depth += 1
-        self.depth_log(f"name={node.name}")
-        self.depth_log(f"iterator={node.iterator}")
-        node.body.accept(self)
-        self.depth -= 1
-        self.depth_log(")")
+        self.write("For(")
+        with self.inc_depth():
+            self.write(f"name={node.name}")
+            self.write(f"iterator={node.iterator}")
+            node.body.accept(self)
+        self.write(")")
 
     def visit_include(self, node: ast.Include):
-        self.depth_log(f"Include({node.source})")
+        self.write(f"Include({node.source})")
 
     def visit_macro(self, node: ast.Macro):
-        self.depth_log("Macro(")
-        self.depth += 1
-        self.depth_log(f"name={node.name}")
-        self.depth_log(f"parameters={node.parameters}")
-        node.body.accept(self)
-        self.depth -= 1
-        self.depth_log(")")
+        self.write("Macro(")
+        with self.inc_depth():
+            self.write(f"name={node.name}")
+            self.write(f"parameters={node.parameters}")
+            node.body.accept(self)
+        self.write(")")
 
     def visit_lookup(self, node: ast.Lookup):
         if node.transforms:
-            self.depth_log(f"Lookup({node.name} transforms={node.transforms})")
+            self.write(f"Lookup({node.name} transforms={node.transforms})")
         else:
-            self.depth_log(f"Lookup({node.name})")
+            self.write(f"Lookup({node.name})")
 
     def visit_call(self, node: ast.Call):
-        self.depth_log("Call(")
-        self.depth += 1
-        self.depth_log(f"name={node.name}")
-        for k, v in node.arguments.items():
-            if isinstance(v, ast.Lookup):
-                self.depth_log(f"{k}=Lookup({v.name})")
-            else:
-                self.depth_log(f"{k}={repr(v)}")
-        self.depth -= 1
-        self.depth_log(")")
+        self.write("Call(")
+        with self.inc_depth():
+            self.write(f"name={node.name}")
+            for k, v in node.arguments.items():
+                if isinstance(v, ast.Lookup):
+                    self.write(f"{k}=Lookup({v.name})")
+                else:
+                    self.write(f"{k}={repr(v)}")
+        self.write(")")
 
     def visit_text(self, node: ast.Text):
-        self.depth_log(f"Text({repr(node.text)})")
+        self.write(f"Text({repr(node.text)})")
